@@ -4,9 +4,27 @@ type Gron = Generator<string, void, unknown>;
 
 
 
-export function gron(data: string): Gron {
-  const json = JSON.parse(data);
-  return gronUnknown(json);
+export async function gron(path: string): Promise<Gron> {
+  const json = await getJson(path);
+  return gronRaw(json);
+}
+
+
+export function gronRaw(json: string): Gron {
+  const data = JSON.parse(json);
+  return gronUnknown(data);
+}
+
+
+
+
+function getJson(path: string): Promise<string> {
+  try {
+    const url = new URL(path);
+    return fetch(url).then((res) => res.text());
+  } catch (error) {
+    return Deno.readTextFile(path);
+  }
 }
 
 
