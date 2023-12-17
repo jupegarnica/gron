@@ -1,4 +1,4 @@
-import { assertEquals } from "https://deno.land/std@0.209.0/assert/mod.ts";
+import { assertEquals, assertStringIncludes } from "https://deno.land/std@0.209.0/assert/mod.ts";
 import { assignValue, extractKeys, gronRaw, isValidKey, ungronRaw } from "./main.ts";
 import { cmd, cmdWithStdin } from "./cmd.ts";
 const gron = 'deno run -A cli.ts'
@@ -261,4 +261,29 @@ Deno.test('[e2e] gron and ungron must be equal', async () => {
 `;
   assertEquals(stdout, out);
 
+});
+
+Deno.test('[e2e] exit code 0', async () => {
+  const { code, stderr } = await cmd(`${gron} fixtures/obj.json`);
+  assertEquals(code, 0);
+  assertStringIncludes(stderr, '');
+});
+
+Deno.test('[e2e] exit code 1', async () => {
+  const { code, stderr } = await cmd(`${gron} fixtures/404.json`);
+  assertStringIncludes(stderr, 'Failed to read file:');
+  assertEquals(code, 1);
+});
+
+Deno.test('[e2e] exit code 2', async () => {
+  const { code, stderr } = await cmd(`${gron} fixtures/invalid.json`);
+  assertStringIncludes(stderr, 'Failed to parse JSON:');
+  assertEquals(code, 2);
+});
+
+
+Deno.test('[e2e] exit code 4', async () => {
+  const { code, stderr } = await cmd(`${gron} http://localhost:3579`);
+  assertStringIncludes(stderr, 'Failed to fetch URL:');
+  assertEquals(code, 4);
 });

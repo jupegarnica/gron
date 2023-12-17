@@ -8,27 +8,51 @@ type Gron = Generator<string, void, unknown>;
 export async function gron(path: string): Promise<void> {
   const json = await getJson(path);
 
-  const generator =  gronRaw(json);
+  const generator = gronRaw(json);
   for (const line of generator) {
-      console.log(line);
+    console.log(line);
   }
 }
 
 
 export function gronRaw(json: string): Gron {
-  const data = JSON.parse(json);
+  let data: unknown;
+  try {
+    data = JSON.parse(json);
+  } catch (error) {
+    throw new Error("Failed to parse JSON: " + error + "\n");
+  }
   return gronUnknown(data);
 }
 
 
 
-
-function getJson(path: string): Promise<string> {
+async function getJson(path: string): Promise<string> {
+  let url: URL;
   try {
-    const url = new URL(path);
-    return fetch(url).then((res) => res.text());
+    url = new URL(path);
+
   } catch (error) {
-    return Deno.readTextFile(path);
+
+    return await readTextFile(path);
+  }
+  if (url.protocol === 'file:') {
+    return readTextFile(url.pathname);
+  }
+
+  try {
+    return await fetch(url).then((res) => res.text());
+  } catch (error) {
+    throw new Error("Failed to fetch URL: " + url + "\n" + error + "\n");
+
+  }
+}
+
+async function readTextFile(path: string): Promise<string> {
+  try {
+    return await Deno.readTextFile(path);
+  } catch (error) {
+    throw new Error("Failed to read file: " + path + "\n" + error + "\n");
   }
 }
 
