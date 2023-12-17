@@ -1,5 +1,5 @@
 import { assertEquals } from "https://deno.land/std@0.209.0/assert/mod.ts";
-import { gronRaw } from "./main.ts";
+import { gronRaw, isValidKey } from "./main.ts";
 
 Deno.test('gron a object', function () {
   const generator = gronRaw(`{"a": 1, "b": 2}`);
@@ -93,31 +93,33 @@ Deno.test('gron a empty array', function () {
   assertEquals(fourth.value, "json[2] = 2;");
 });
 
-// test invalid json types: bigint, undefined, symbol, function
 
-// Deno.test('gron a bigint',function () {
-//   const generator = gronRaw(`1n`);
-//   const first = generator.next();
-//   assertEquals(first.value, "json = 1;");
-// });
+Deno.test('[isValidKey] valid key', function () {
+  assertEquals(isValidKey('hola'), true);
+  assertEquals(isValidKey('a.b'), false);
+  assertEquals(isValidKey('a3'), true);
+  assertEquals(isValidKey('3a'), false);
+  assertEquals(isValidKey('3'), false);
+  assertEquals(isValidKey('$'), true);
+  assertEquals(isValidKey('_'), true);
+  assertEquals(isValidKey('camelCase'), true);
+  assertEquals(isValidKey('PascalCase'), true);
+  assertEquals(isValidKey('snake_case'), true);
+  assertEquals(isValidKey('kebab-case'), false);
+  assertEquals(isValidKey('!@#$%^&*'), false);
+})
 
-// Deno.test('gron a undefined',function () {
-//   const generator = gronRaw(`undefined`);
-//   const first = generator.next();
-//   assertEquals(first.value, "json = undefined;");
-// });
-
-// Deno.test('gron a symbol',function () {
-//   const generator = gronRaw(`Symbol("foo")`);
-//   const first = generator.next();
-//   assertEquals(first.value, "json = Symbol(\"foo\");");
-// });
-
-// Deno.test('gron a function',function () {
-//   const generator = gronRaw(`function foo() {}`);
-//   const first = generator.next();
-//   assertEquals(first.value, "json = function foo() {};");
-// });
+Deno.test('test not valid dot keys',function () {
+  const generator = gronRaw(`{"a.b": 1, "content-type": 1, "3d": 1}`);
+  const first = generator.next();
+  assertEquals(first.value, "json = {};");
+  const second = generator.next();
+  assertEquals(second.value, `json["a.b"] = 1;`);
+  const third = generator.next();
+  assertEquals(third.value, `json["content-type"] = 1;`);
+  const fourth = generator.next();
+  assertEquals(fourth.value, `json["3d"] = 1;`);
+});
 
 
 async function cmd(instruction: string): Promise<{ code: number, stdout: string, stderr: string }> {

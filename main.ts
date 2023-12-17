@@ -1,3 +1,4 @@
+import { validKeyNameRegExp } from "./valid_key_name_regexp.ts";
 
 
 type Gron = Generator<string, void, unknown>;
@@ -57,7 +58,7 @@ function* gronUnknown(data: unknown, path: string = 'json'): Gron {
 function* gronObject(data: Record<string, unknown>, path: string): Gron {
   yield `${path} = {};`;
   for (const key in data) {
-    yield* gronUnknown(data[key], `${path}.${key}`);
+    yield* gronUnknown(data[key], createNextPath(path, key));
   }
 }
 
@@ -66,8 +67,18 @@ function* gronArray(data: unknown[], path: string): Gron {
   for (const key in data) {
     yield* gronUnknown(data[key], `${path}[${key}]`);
   }
+}
 
+export function isValidKey(key: string): boolean {
+  return !!key.match(validKeyNameRegExp);
+}
 
+function createNextPath(path: string, key: string): string {
+
+  if (isValidKey(key)) {
+    return `${path}.${key}`;
+  }
+  return `${path}["${key}"]`;
 }
 
 function whichType(data: unknown): string {
