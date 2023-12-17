@@ -1,5 +1,6 @@
 import { assertEquals } from "https://deno.land/std@0.209.0/assert/mod.ts";
 import { assignValue, extractKeys, gronRaw, isValidKey, ungronRaw } from "./main.ts";
+import { cmd, cmdWithStdin } from "./cmd.ts";
 const gron = 'deno run -A cli.ts'
 
 Deno.test('gron a object', function () {
@@ -41,9 +42,6 @@ Deno.test('gron a number', function () {
   const first = generator.next();
   assertEquals(first.value, "json = 1;");
 });
-
-
-
 
 Deno.test('gron a string', function () {
   const generator = gronRaw(`"hello"`);
@@ -240,11 +238,11 @@ json.b["a.b"] = 1;
 Deno.test('[e2e] --ungron', async () => {
 
   const stdin =
-`json = {};
+    `json = {};
 json.a = 1;`;
   const { stdout } = await cmdWithStdin(`${gron} --ungron`, stdin);
   let out =
-`{
+    `{
   "a": 1
 }
 `;
@@ -253,30 +251,14 @@ json.a = 1;`;
 });
 
 
-
-async function cmd(instruction: string): Promise<{ code: number, stdout: string, stderr: string }> {
-  const [exec, ...args] = instruction.split(' ');
-  const command = new Deno.Command(exec, { args });
-  const { code, stdout, stderr } = await command.output();
-  const out = new TextDecoder().decode(stdout);
-  const err = new TextDecoder().decode(stderr);
-  return { code, stdout: out, stderr: err };
+Deno.test('[e2e] gron and ungron must be equal', async () => {
+  const { stdout: stdin } = await cmd(`${gron} fixtures/obj.json`);
+  const { stdout } = await cmdWithStdin(`${gron} --ungron`, stdin);
+  let out =
+    `{
+  "a": 1
 }
+`;
+  assertEquals(stdout, out);
 
-
-async function cmdWithStdin(instruction: string, stdin: string): Promise<{ code: number, stdout: string, stderr: string }> {
-  const [exec, ...args] = instruction.split(' ');
-  const command = new Deno.Command(exec, { args, stdin: 'piped', stdout: 'piped', stderr: 'piped' });
-  const process = command.spawn();
-  const encoder = new TextEncoder();
-  const writer = process.stdin.getWriter();
-  writer.write(encoder.encode(stdin));
-  writer.releaseLock();
-  await process.stdin.close();
-  const { code, stdout, stderr } = await process.output();
-
-  const decoder = new TextDecoder();
-  const out = decoder.decode(stdout);
-  const err = decoder.decode(stderr);
-  return { code, stdout: out, stderr: err };
-}
+});
