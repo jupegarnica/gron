@@ -2,7 +2,8 @@
   "tasks": {
     "install": "deno install --allow-read --name=gron ./cli.ts",
     "test": "deno test --allow-read --allow-run --allow-net --watch",
-    "bench": "deno bench -A"
+    "bench": "deno bench -A",
+    "release": "deno run  -A https://deno.land/x/version/index.ts patch && git push && git push --tags"
   },
   "lock": false
 }
