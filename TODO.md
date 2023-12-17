@@ -1,5 +1,5 @@
 - [x] fetch from url
-- [ ] keys as ["no-dot-valid-key"]
+- [x] keys as ["no-dot-valid-key"]
 - [ ] ungron
 - [ ] --help
 
