@@ -1,5 +1,5 @@
 import { assertEquals } from "https://deno.land/std@0.209.0/assert/mod.ts";
-import { gronRaw, isValidKey } from "./main.ts";
+import { assignValue, extractKeys, gronRaw, isValidKey, ungronRaw } from "./main.ts";
 
 Deno.test('gron a object', function () {
   const generator = gronRaw(`{"a": 1, "b": 2}`);
@@ -109,7 +109,7 @@ Deno.test('[isValidKey] valid key', function () {
   assertEquals(isValidKey('!@#$%^&*'), false);
 })
 
-Deno.test('test not valid dot keys',function () {
+Deno.test('test not valid dot keys', function () {
   const generator = gronRaw(`{"a.b": 1, "content-type": 1, "3d": 1}`);
   const first = generator.next();
   assertEquals(first.value, "json = {};");
@@ -124,7 +124,7 @@ Deno.test('test not valid dot keys',function () {
 
 async function cmd(instruction: string): Promise<{ code: number, stdout: string, stderr: string }> {
   const [exec, ...args] = instruction.split(' ');
-  const command = new Deno.Command(exec, { args });
+  const command = new Deno.Command(exec, { args, stdin: 'piped' });
   const { code, stdout, stderr } = await command.output();
   const out = new TextDecoder().decode(stdout);
   const err = new TextDecoder().decode(stderr);
@@ -143,7 +143,7 @@ json.a = 1;
 });
 
 Deno.test('[e2e] fetch json', async function () {
-  const server = Deno.serve({ port: 8080, onListen(){} }, () => new Response(`{"b":1}`),)
+  const server = Deno.serve({ port: 8080, onListen() { } }, () => new Response(`{"b":1}`),)
   const { stdout } = await cmd(`deno run -A cli.ts http://localhost:8080`);
   await server.shutdown()
   let out =
@@ -152,3 +152,109 @@ json.b = 1;
 `
   assertEquals(stdout, out)
 })
+
+
+// ungron
+Deno.test('[ungron] extractKeys', function () {
+
+  assertEquals(extractKeys('json.a'), ['a']);
+  assertEquals(extractKeys('json["a-c"]'), ["a-c"]);
+  assertEquals(extractKeys('json["a.c"]'), ["a.c"]);
+  assertEquals(extractKeys('json[0]'), [0]);
+  assertEquals(extractKeys('json[0][1]'), [0, 1]);
+  assertEquals(extractKeys('json.a.b.c'), ['a', 'b', 'c']);
+  assertEquals(extractKeys('json.a["b"].c'), ['a', 'b', 'c']);
+  assertEquals(extractKeys('json.a["b"]["c"]'), ['a', 'b', 'c']);
+
+})
+
+
+Deno.test('[ungron] assignValue', function () {
+
+  let data = {}
+  assignValue(data, ['a'], '1')
+  assertEquals(data, { a: 1 });
+
+  assignValue(data, ['b'], '[]');
+  assertEquals(data, { a: 1, b: [] });
+
+  assignValue(data, ['b', 0], '"1"');
+  assertEquals(data, { a: 1, b: ["1"] });
+
+  assignValue(data, ['b', 1], '{}');
+  assertEquals(data, { a: 1, b: ["1", {}] });
+
+  assignValue(data, ['b', 1, 'c'], '1');
+  assertEquals(data, { a: 1, b: ["1", { c: 1 }] });
+
+  assignValue(data, ['c', 'content-type'], '"application/json"');
+  assertEquals(data, { a: 1, b: ["1", { c: 1 }], c: { 'content-type': 'application/json' } });
+
+
+})
+
+
+Deno.test('[ungron] ungronRaw', () => {
+  const input =
+    `json = {};
+json.a = [];
+json.a[0] = 1;
+json.a[1] = "2";
+`
+
+  const output = ungronRaw(input);
+
+  const expected =
+    `{
+  "a": [
+    1,
+    "2"
+  ]
+}`
+  assertEquals(output, expected);
+})
+
+
+Deno.test('[ungron] ungronRaw complex', () => {
+  const input =
+    `json = {};
+json.a = [];
+json.a[0] = 1;
+json.a[1] = "2";
+json.b = {};
+json.b["content-type"] = "application/json";
+json.b["3d"] = 1;
+json.b["a.b"] = 1;
+`;
+
+
+  const output = ungronRaw(input);
+
+  const expected =
+    `{
+  "a": [
+    1,
+    "2"
+  ],
+  "b": {
+    "content-type": "application/json",
+    "3d": 1,
+    "a.b": 1
+  }
+}`
+  assertEquals(output, expected);
+})
+
+Deno.test.only('[e2e] --ungron', async () => {
+
+  const gron = 'deno run -A cli.ts'
+
+  const { stdout } = await cmd(`echo "json = {};\njson.a = 1;\n" | ${gron} --ungron`);
+  let out =
+    `{
+  "a": 1
+}
+`
+  assertEquals(stdout, out);
+
+});

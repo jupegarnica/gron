@@ -5,9 +5,13 @@ type Gron = Generator<string, void, unknown>;
 
 
 
-export async function gron(path: string): Promise<Gron> {
+export async function gron(path: string): Promise<void> {
   const json = await getJson(path);
-  return gronRaw(json);
+
+  const generator =  gronRaw(json);
+  for (const line of generator) {
+      console.log(line);
+  }
 }
 
 
@@ -93,3 +97,148 @@ function whichType(data: unknown): string {
   }
   return typeof data;
 };
+
+function whichStringType(data: string): string {
+  if (data === 'null') {
+    return 'null';
+  }
+  if (data === 'true' || data === 'false') {
+    return 'boolean';
+  }
+  if (data === '{}') {
+    return 'object';
+  }
+  if (data === '[]') {
+    return 'array';
+  }
+  if (data.match(/^".*"$/)) {
+    return 'string';
+  }
+  return 'number';
+}
+function prepareValue(value: string): string {
+  return value.replace(/;\s{0,}$/, '').trim();
+}
+
+function returnValue(data: string): unknown {
+  const dataType = whichStringType(data);
+  switch (dataType) {
+    case 'null':
+      return null;
+    case 'boolean':
+      return data === 'true' ? true : false;
+    case 'object':
+      return {};
+    case 'array':
+      return [];
+    case 'string':
+      return data.replace(/"/g, '');
+    default:
+      return Number(data);
+  }
+}
+
+function extractKeyValueFromLine(line: string): [string, string] {
+
+  const [key, value] = line.split('=');
+  return [key.trim(), prepareValue(value)];
+}
+
+type stringOrNumber = string | number;
+export function extractKeys(keys: string): stringOrNumber[] {
+  let path: stringOrNumber[] = [];
+  let regex = /\["(.*?)"\]|\[(\d+)\]|\.(\w+)/g;
+  let matches = keys.matchAll(regex);
+
+  for (let match of matches) {
+    let key: stringOrNumber = match[1] || match[2] || match[3];
+    if (match[2]) key = Number(key); // convert to number if it's a digit
+    path.push(key);
+  }
+
+  return path;
+}
+
+export function assignValue(data: object | unknown[], path: stringOrNumber[], value: string): void {
+  let current: any = data;
+
+  for (let i = 0; i < path.length; i++) {
+    let key = path[i];
+
+    if (i === path.length - 1) {
+      // Estamos en el último elemento de la ruta, asignar el valor
+      switch (whichStringType(value)) {
+        case 'null':
+          current[key] = null;
+          break;
+        case 'boolean':
+          current[key] = value === 'true';
+          break;
+        case 'object':
+          current[key] = {};
+          break;
+        case 'array':
+          current[key] = [];
+          break;
+        case 'string':
+          current[key] = value.slice(1, -1); // Eliminar las comillas
+          break;
+        case 'number':
+          current[key] = Number(value);
+          break;
+      }
+    } else {
+      // No estamos en el último elemento de la ruta, crear un nuevo objeto o array si es necesario
+      if (current[key] === undefined) {
+        current[key] = typeof path[i + 1] === 'number' ? [] : {};
+      }
+      current = current[key];
+    }
+  }
+}
+
+
+export function ungronRaw(stdin: string): string {
+  const lines = stdin.split('\n');
+  const firstLine = lines.shift() as string;
+  const [key, value] = extractKeyValueFromLine(firstLine);
+
+  if (key !== 'json') {
+    throw new Error('invalid gron');
+  }
+  let data = returnValue(value);
+  if (typeof data !== 'object' || data === null) {
+    return JSON.stringify(data);
+  }
+
+  for (const line of lines) {
+    const _line = line.trim();
+    if (!_line) {
+      continue;
+    }
+    const [keys, value] = extractKeyValueFromLine(_line);
+    const path = extractKeys(keys);
+    assignValue(data, path, value);
+
+  }
+  return JSON.stringify(data, null, 2);
+
+}
+
+export async function ungron(): Promise<void> {
+  const stdin = await readStdin();
+  console.log({stdin});
+
+  const json = ungronRaw(stdin);
+  console.log(json);
+}
+
+
+async function readStdin(): Promise<string> {
+  const decoder = new TextDecoder();
+  let text = ''
+  for await (const chunk of Deno.stdin.readable) {
+    text += decoder.decode(chunk);
+  }
+  return text;
+}
