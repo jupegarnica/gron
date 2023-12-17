@@ -1,5 +1,8 @@
 {
   "tasks": {
-    "test": "deno test -A --watch"
-  }
+    "install": "deno install --allow-read --name=gron ./cli.ts",
+    "test": "deno test --allow-read --allow-run --allow-net --watch",
+    "bench": "deno bench"
+  },
+  "lock": false
 }

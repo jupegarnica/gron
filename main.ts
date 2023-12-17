@@ -227,8 +227,6 @@ export function ungronRaw(stdin: string): string {
 
 export async function ungron(): Promise<void> {
   const stdin = await readStdin();
-  console.log({stdin});
-
   const json = ungronRaw(stdin);
   console.log(json);
 }

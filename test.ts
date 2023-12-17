@@ -1,5 +1,6 @@
 import { assertEquals } from "https://deno.land/std@0.209.0/assert/mod.ts";
 import { assignValue, extractKeys, gronRaw, isValidKey, ungronRaw } from "./main.ts";
+const gron = 'deno run -A cli.ts'
 
 Deno.test('gron a object', function () {
   const generator = gronRaw(`{"a": 1, "b": 2}`);
@@ -122,18 +123,9 @@ Deno.test('test not valid dot keys', function () {
 });
 
 
-async function cmd(instruction: string): Promise<{ code: number, stdout: string, stderr: string }> {
-  const [exec, ...args] = instruction.split(' ');
-  const command = new Deno.Command(exec, { args, stdin: 'piped' });
-  const { code, stdout, stderr } = await command.output();
-  const out = new TextDecoder().decode(stdout);
-  const err = new TextDecoder().decode(stderr);
-  return { code, stdout: out, stderr: err };
-}
-
 Deno.test('[e2e] read from disk', async function () {
 
-  const { stdout } = await cmd(`deno run -A cli.ts fixtures/obj.json`);
+  const { stdout } = await cmd(`${gron} fixtures/obj.json`);
   let out =
     `json = {};
 json.a = 1;
@@ -144,7 +136,7 @@ json.a = 1;
 
 Deno.test('[e2e] fetch json', async function () {
   const server = Deno.serve({ port: 8080, onListen() { } }, () => new Response(`{"b":1}`),)
-  const { stdout } = await cmd(`deno run -A cli.ts http://localhost:8080`);
+  const { stdout } = await cmd(`${gron} http://localhost:8080`);
   await server.shutdown()
   let out =
     `json = {};
@@ -245,16 +237,46 @@ json.b["a.b"] = 1;
   assertEquals(output, expected);
 })
 
-Deno.test.only('[e2e] --ungron', async () => {
+Deno.test('[e2e] --ungron', async () => {
 
-  const gron = 'deno run -A cli.ts'
-
-  const { stdout } = await cmd(`echo "json = {};\njson.a = 1;\n" | ${gron} --ungron`);
+  const stdin =
+`json = {};
+json.a = 1;`;
+  const { stdout } = await cmdWithStdin(`${gron} --ungron`, stdin);
   let out =
-    `{
+`{
   "a": 1
 }
-`
+`;
   assertEquals(stdout, out);
 
 });
+
+
+
+async function cmd(instruction: string): Promise<{ code: number, stdout: string, stderr: string }> {
+  const [exec, ...args] = instruction.split(' ');
+  const command = new Deno.Command(exec, { args });
+  const { code, stdout, stderr } = await command.output();
+  const out = new TextDecoder().decode(stdout);
+  const err = new TextDecoder().decode(stderr);
+  return { code, stdout: out, stderr: err };
+}
+
+
+async function cmdWithStdin(instruction: string, stdin: string): Promise<{ code: number, stdout: string, stderr: string }> {
+  const [exec, ...args] = instruction.split(' ');
+  const command = new Deno.Command(exec, { args, stdin: 'piped', stdout: 'piped', stderr: 'piped' });
+  const process = command.spawn();
+  const encoder = new TextEncoder();
+  const writer = process.stdin.getWriter();
+  writer.write(encoder.encode(stdin));
+  writer.releaseLock();
+  await process.stdin.close();
+  const { code, stdout, stderr } = await process.output();
+
+  const decoder = new TextDecoder();
+  const out = decoder.decode(stdout);
+  const err = decoder.decode(stderr);
+  return { code, stdout: out, stderr: err };
+}
