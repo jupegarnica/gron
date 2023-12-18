@@ -238,7 +238,8 @@ Deno.test('[e2e] gron from stdin', async () => {
   const { stdout } = await cmdWithStdin(`${gron}`, stdin);
   const out =
     `json = {};
-json.a = 1;`;
+json.a = 1;
+`;
 
 assertEquals(stdout, out);
 });

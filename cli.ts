@@ -3,13 +3,14 @@ import { parseArgs } from "https://deno.land/std@0.208.0/cli/parse_args.ts";
 
 if (import.meta.main) {
     const args = parseArgs(Deno.args);
-    const input = String(args._[0]);
+    const path = args._[0];
+    const input = args._[0] ? String(path) : '';
     try {
 
         if (args.ungron) {
             await ungron();
         } else {
-            await gron(input);
+            await gron(input.trim());
         }
         Deno.exit(0)
     } catch (error) {

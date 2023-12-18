@@ -1,18 +1,27 @@
 import { validKeyNameRegExp } from "./valid_key_name_regexp.ts";
 
 
-type Gron = Generator<string, void, unknown>;
+type GronGenerator = Generator<string, void, unknown>;
 
 export async function gron(path: string): Promise<void> {
-  const json = await getJson(path);
+  let json: string;
+  if (path) {
+    json = await getJson(path);
 
+  } else {
+    json = await readStdin();
+  }
+  gronAndPrint(json);
+}
+
+function gronAndPrint(json: string): void {
   const generator = gronRaw(json);
   for (const line of generator) {
     console.log(line);
   }
 }
 
-export function gronRaw(json: string): Gron {
+export function gronRaw(json: string): GronGenerator {
   let data: unknown;
   try {
     data = JSON.parse(json);
@@ -51,7 +60,7 @@ async function readTextFile(path: string): Promise<string> {
 
 
 
-function* gronUnknown(data: unknown, path: string = 'json'): Gron {
+function* gronUnknown(data: unknown, path: string = 'json'): GronGenerator {
   const type = whichType(data);
 
   switch (type) {
@@ -76,14 +85,14 @@ function* gronUnknown(data: unknown, path: string = 'json'): Gron {
   }
 }
 
-function* gronObject(data: Record<string, unknown>, path: string): Gron {
+function* gronObject(data: Record<string, unknown>, path: string): GronGenerator {
   yield `${path} = {};`;
   for (const key in data) {
     yield* gronUnknown(data[key], createNextPath(path, key));
   }
 }
 
-function* gronArray(data: unknown[], path: string): Gron {
+function* gronArray(data: unknown[], path: string): GronGenerator {
   yield `${path} = [];`;
   for (const key in data) {
     yield* gronUnknown(data[key], `${path}[${key}]`);
@@ -133,6 +142,7 @@ function whichStringType(data: string): string {
   }
   return 'number';
 }
+
 function prepareValue(value: string): string {
   return value.replace(/;\s{0,}$/, '').trim();
 }
@@ -161,6 +171,7 @@ function extractKeyValueFromLine(line: string): [string, string] {
   return [key.trim(), prepareValue(value)];
 }
 
+// --ungron
 type stringOrNumber = string | number;
 export function extractKeys(keys: string): stringOrNumber[] {
   let path: stringOrNumber[] = [];
