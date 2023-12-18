@@ -17,7 +17,7 @@ export async function gron(path: string): Promise<void> {
 function gronAndPrint(json: string): void {
   const generator = gronRaw(json);
   for (const line of generator) {
-    console.log(line);
+    console.info(line);
   }
 }
 
@@ -265,7 +265,7 @@ export function ungronRaw(stdin: string): string {
 export async function ungron(): Promise<void> {
   const stdin = await readStdin();
   const json = ungronRaw(stdin);
-  console.log(json);
+  console.info(json);
 }
 
 

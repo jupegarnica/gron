@@ -3,10 +3,11 @@ import { parseArgs } from "https://deno.land/std@0.208.0/cli/parse_args.ts";
 
 if (import.meta.main) {
     const args = parseArgs(Deno.args, {
-        boolean: ['ungron', 'help'],
+        boolean: ['ungron', 'help', 'version'],
         alias: {
             ungron: ['u'],
-            help: ['h']
+            help: ['h'],
+            version: ['v']
         },
         default: {
             ungron: false
@@ -15,13 +16,25 @@ if (import.meta.main) {
     const path = args._[0];
     const input = args._[0] ? String(path) : '';
     try {
+        if (args.version) {
+            const versionURl = new URL(import.meta.resolve('./VERSION'));
+            let version: string;
+            if (versionURl.protocol === 'file:') {
+                version = await Deno.readTextFile(versionURl);
+            } else {
+                version = await fetch(versionURl).then(res => res.text());
+            }
+            console.info(version);
+            Deno.exit(0);
+        }
         if (args.help) {
-            console.log(`
+            console.info(`
 Usage: gron [options] [path]
 
 Options:
     -u, --ungron    ungron
     -h, --help      display help
+    -v, --version   display version
 
 Examples:
     gron example.json
