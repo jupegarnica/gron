@@ -20,8 +20,10 @@ if (import.meta.main) {
             const versionURl = new URL(import.meta.resolve('./VERSION'));
             let version: string;
             if (versionURl.protocol === 'file:') {
+                console.log('file', versionURl);
                 version = await Deno.readTextFile(versionURl);
             } else {
+                console.log('url', versionURl);
                 version = await fetch(versionURl).then(res => res.text());
             }
             console.info(version);

@@ -2,6 +2,7 @@
   "tasks": {
     "install": "deno install --allow-read --allow-net -fn gron ./cli.ts",
     "install:x": "deno install --allow-read --allow-net -fn gron https://deno.land/x/gron/cli.ts",
+    "install:gh": "deno install --allow-read --allow-net -fn gron https://raw.githubusercontent.com/jupegarnica/gron/main/cli.ts",
     "test": "deno test --allow-read --allow-run --allow-net --watch",
     "bench": "deno bench -A",
     "release": "deno test -A && deno run  -A https://deno.land/x/version/index.ts patch && git push && git push --tags"
