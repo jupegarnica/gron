@@ -39,7 +39,7 @@ async function getJson(path: string): Promise<string> {
     return await readTextFile(path);
   }
   if (url.protocol === 'file:') {
-    const  _path = url.host + url.pathname;
+    const _path = url.host + url.pathname;
     return await readTextFile(_path);
   }
 
@@ -226,17 +226,28 @@ export function assignValue(data: object | unknown[], path: stringOrNumber[], va
 }
 
 
+function getInitialValue(path: string): unknown {
+  const keys = extractKeys(path);
+  const firstKey = keys.shift();
+  if (typeof firstKey === 'number') {
+    return [];
+  }
+  return {};
+
+}
+
 export function ungronRaw(stdin: string): string {
   const lines = stdin.split('\n');
   const firstLine = lines.shift() as string;
   const [key, value] = extractKeyValueFromLine(firstLine);
 
-  if (key !== 'json') {
-    throw new Error('invalid gron');
-  }
-  let data = returnValue(value);
+  const data = key !== 'json' ? getInitialValue(key) : returnValue(value);
+
+
   if (typeof data !== 'object' || data === null) {
     return JSON.stringify(data);
+  } else {
+    assignValue(data, extractKeys(key), value);
   }
 
   for (const line of lines) {
@@ -247,10 +258,8 @@ export function ungronRaw(stdin: string): string {
     const [keys, value] = extractKeyValueFromLine(_line);
     const path = extractKeys(keys);
     assignValue(data, path, value);
-
   }
   return JSON.stringify(data, null, 2);
-
 }
 
 export async function ungron(): Promise<void> {

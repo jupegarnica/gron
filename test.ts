@@ -157,6 +157,10 @@ Deno.test('[ungron] assignValue', function () {
   assignValue(data, ['c', 'content-type'], '"application/json"');
   assertEquals(data, { a: 1, b: ["1", { c: 1 }], c: { 'content-type': 'application/json' } });
 
+  const arr: unknown[] = [];
+  assignValue(arr, [1, 'c'], '0');
+  assertEquals(arr, [/* empty , not undefined nor null */,{ c: 0 }]);
+
 
 })
 
@@ -268,14 +272,16 @@ json.a = 1;
 });
 
 Deno.test('[e2e] fetch json', async function () {
-  const server = Deno.serve({ port: 8080, onListen() { } }, () => new Response(`{"b":1}`),)
+
+  const server = await Deno.serve({ port: 8080, onListen() { } }, () => new Response(`{"b":1}`),)
   const { stdout } = await cmd(`${gron} http://localhost:8080`);
   await server.shutdown()
+  await server.finished;
   let out =
     `json = {};
 json.b = 1;
 `
-  assertEquals(stdout, out)
+  assertEquals(stdout, out);
 });
 
 
@@ -287,6 +293,40 @@ Deno.test('[e2e] gron and ungron must be equal', async () => {
   "a": 1
 }
 `;
+  assertEquals(stdout, out);
+
+});
+
+
+Deno.test('[e2e] gron | grep | ungron ', async () => {
+  // gron fixtures/nested.json | grep c | gron -u
+  const { stdout: in1 } = await cmd(`${gron} fixtures/nested.json`);
+  const { stdout: in2 } = await cmdWithStdin(`grep c`, in1);
+  const { stdout, code } = await cmdWithStdin(`${gron} -u`, in2);
+
+  let out =
+    `[
+  {
+    "c": 0
+  },
+  null,
+  {
+    "c": 2
+  },
+  {
+    "nested": {
+      "b": [
+        null,
+        null,
+        {
+          "c": 14
+        }
+      ]
+    }
+  }
+]
+`;
+  assertEquals(code, 0);
   assertEquals(stdout, out);
 
 });
