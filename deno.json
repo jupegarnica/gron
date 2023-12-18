@@ -1,6 +1,6 @@
 {
   "tasks": {
-    "install": "deno install --A -fn gron ./cli.ts",
+    "install": "deno install --allow-read --allow-net -fn gron ./cli.ts",
     "install:x": "deno install --allow-read --allow-net -fn gron https://deno.land/x/gron/cli.ts",
     "test": "deno test --allow-read --allow-run --allow-net --watch",
     "bench": "deno bench -A",
