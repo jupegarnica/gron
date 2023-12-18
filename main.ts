@@ -37,7 +37,8 @@ async function getJson(path: string): Promise<string> {
     return await readTextFile(path);
   }
   if (url.protocol === 'file:') {
-    return readTextFile(url.pathname);
+    const  _path = url.host + url.pathname;
+    return await readTextFile(_path);
   }
 
   try {
