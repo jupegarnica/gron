@@ -59,7 +59,6 @@ Deno.test('gron a nested object', function () {
   assertEquals(third.value, "json.a.b = 1;");
 });
 
-// mixed data types nested
 Deno.test('gron a mixed nested object', function () {
   const generator = gronRaw(`{"a": [{"b":1}, 33], "c": true}`);
   const first = generator.next();
@@ -120,28 +119,6 @@ Deno.test('test not valid dot keys', function () {
   assertEquals(fourth.value, `json["3d"] = 1;`);
 });
 
-
-Deno.test('[e2e] read from disk', async function () {
-
-  const { stdout } = await cmd(`${gron} fixtures/obj.json`);
-  let out =
-    `json = {};
-json.a = 1;
-`
-  assertEquals(stdout, out)
-
-});
-
-Deno.test('[e2e] fetch json', async function () {
-  const server = Deno.serve({ port: 8080, onListen() { } }, () => new Response(`{"b":1}`),)
-  const { stdout } = await cmd(`${gron} http://localhost:8080`);
-  await server.shutdown()
-  let out =
-    `json = {};
-json.b = 1;
-`
-  assertEquals(stdout, out)
-})
 
 
 // ungron
@@ -235,6 +212,8 @@ json.b["a.b"] = 1;
   assertEquals(output, expected);
 })
 
+
+// e2e
 Deno.test('[e2e] --ungron', async () => {
 
   const stdin =
@@ -248,6 +227,54 @@ json.a = 1;`;
 `;
   assertEquals(stdout, out);
 
+});
+
+Deno.test('[e2e] gron from stdin', async () => {
+  let stdin =
+    `{
+  "a": 1
+}
+`;
+  const { stdout } = await cmdWithStdin(`${gron}`, stdin);
+  const out =
+    `json = {};
+json.a = 1;`;
+
+assertEquals(stdout, out);
+});
+
+Deno.test('[e2e] read from disk', async function () {
+
+  const { stdout } = await cmd(`${gron} fixtures/obj.json`);
+  let out =
+    `json = {};
+json.a = 1;
+`
+  assertEquals(stdout, out)
+
+});
+
+
+Deno.test('[e2e] read from disk file protocol', async function () {
+
+  const { stdout } = await cmd(`${gron} file://./fixtures/obj.json`);
+  let out =
+    `json = {};
+json.a = 1;
+`
+  assertEquals(stdout, out)
+
+});
+
+Deno.test('[e2e] fetch json', async function () {
+  const server = Deno.serve({ port: 8080, onListen() { } }, () => new Response(`{"b":1}`),)
+  const { stdout } = await cmd(`${gron} http://localhost:8080`);
+  await server.shutdown()
+  let out =
+    `json = {};
+json.b = 1;
+`
+  assertEquals(stdout, out)
 });
 
 

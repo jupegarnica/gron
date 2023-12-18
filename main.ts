@@ -3,8 +3,6 @@ import { validKeyNameRegExp } from "./valid_key_name_regexp.ts";
 
 type Gron = Generator<string, void, unknown>;
 
-
-
 export async function gron(path: string): Promise<void> {
   const json = await getJson(path);
 
@@ -13,7 +11,6 @@ export async function gron(path: string): Promise<void> {
     console.log(line);
   }
 }
-
 
 export function gronRaw(json: string): Gron {
   let data: unknown;
@@ -25,15 +22,11 @@ export function gronRaw(json: string): Gron {
   return gronUnknown(data);
 }
 
-
-
 async function getJson(path: string): Promise<string> {
   let url: URL;
   try {
     url = new URL(path);
-
   } catch (error) {
-
     return await readTextFile(path);
   }
   if (url.protocol === 'file:') {
@@ -45,7 +38,6 @@ async function getJson(path: string): Promise<string> {
     return await fetch(url).then((res) => res.text());
   } catch (error) {
     throw new Error("Failed to fetch URL: " + url + "\n" + error + "\n");
-
   }
 }
 
