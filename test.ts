@@ -1,7 +1,7 @@
 import { assertEquals, assertStringIncludes } from "https://deno.land/std@0.209.0/assert/mod.ts";
 import { assignValue, extractKeys, gronRaw, isValidKey, ungronRaw } from "./main.ts";
 import { cmd, cmdWithStdin } from "./cmd.ts";
-const gron = 'deno run -A cli.ts'
+const gron = 'deno run --allow-read --allow-net ./cli.ts'
 
 Deno.test('gron a object', function () {
   const generator = gronRaw(`{"a": 1, "b": 2}`);
